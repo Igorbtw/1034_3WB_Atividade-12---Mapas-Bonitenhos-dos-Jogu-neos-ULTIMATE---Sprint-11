@@ -1,230 +1,219 @@
-import pygame, sys
+
+import pygame
+import sys
 from pygame.locals import QUIT
 
 
-
 pygame.init()
-
-LARGURA = 800
-ALTURA = 600
-TAMANHO_TILE = 48
-FPS = 60
-
-tela = pygame.display.set_mode((LARGURA, ALTURA))
-relogio = pygame.time.Clock()
+screen = pygame.display.set_mode((800, 600))
+pygame.display.set_caption('my house')
+clock = pygame.time.Clock()
+tile_size = 16
 
 
-def criar_tile_grama():
-    tile = pygame.Surface((TAMANHO_TILE, TAMANHO_TILE))
-    tile.fill((56, 142, 60))
-    pygame.draw.rect(tile, (46, 125, 50), (0, 0, TAMANHO_TILE, TAMANHO_TILE), 2)
-    pygame.draw.line(tile, (46, 125, 50), (0, TAMANHO_TILE // 2), (TAMANHO_TILE, TAMANHO_TILE // 2), 1)
-    pygame.draw.line(tile, (46, 125, 50), (TAMANHO_TILE // 2, 0), (TAMANHO_TILE // 2, TAMANHO_TILE), 1)
-    return tile
+hero_sprite = pygame.image.load('personagem.png')
+
+direcoes = {
+    'baixo': 0,
+    'dir':   1,
+    'esq':   2,
+    'cima':  3,
+}
+direcao = 'baixo'
+curr_frame = 0
+anim_time = 0
+pos_x = 400
+pos_y = 300
+velocidade = 1
+movendo = False
 
 
-def criar_tile_parede():
-    tile = pygame.Surface((TAMANHO_TILE, TAMANHO_TILE))
-    tile.fill((117, 117, 117))
-    pygame.draw.rect(tile, (80, 80, 80), (1, 1, 22, 22))
-    pygame.draw.rect(tile, (80, 80, 80), (25, 25, 22, 22))
-    pygame.draw.rect(tile, (80, 80, 80), (25, 1, 22, 22))
-    pygame.draw.rect(tile, (80, 80, 80), (1, 25, 22, 22))
-    pygame.draw.rect(tile, (60, 60, 60), (0, 0, TAMANHO_TILE, TAMANHO_TILE), 2)
-    return tile
+# grma normal
+gn = pygame.image.load('assesets/tile_0000.png')
+# grama com grama
+gg = pygame.image.load('assesets/tile_0001.png')
+# grama com flor
+gf = pygame.image.load('assesets/tile_0002.png')
+# pedra
+pd = pygame.image.load('assesets/tile_0043.png')
+# partes cerca
+ec = pygame.image.load('assesets/tile_0044.png')
+ce = pygame.image.load('assesets/tile_0045.png')
+dc = pygame.image.load('assesets/tile_0046.png')
+cb = pygame.image.load('assesets/tile_0056.png')
+pc = pygame.image.load('assesets/tile_0070.png')
+pe = pygame.image.load('assesets/tile_0068.png')
+# parte casa(telhado)
+tl = pygame.image.load('assesets/tile_0052.png')
+te = pygame.image.load('assesets/tile_0053.png')
+th = pygame.image.load('assesets/tile_0054.png')
+tb = pygame.image.load('assesets/tile_0064.png')
+tm = pygame.image.load('assesets/tile_0065.png')
+td = pygame.image.load('assesets/tile_0066.png')
+# parte casa(frente)
+di = pygame.image.load('assesets/tile_0076.png')
+es = pygame.image.load('assesets/tile_0079.png')
+po = pygame.image.load('assesets/tile_0089.png')
+ja = pygame.image.load('assesets/tile_0088.png')
+# arvore
+ab = pygame.image.load('assesets/tile_0016.png')
+ac = pygame.image.load('assesets/tile_0004.png')
 
 
-def criar_tile_agua():
-    tile = pygame.Surface((TAMANHO_TILE, TAMANHO_TILE))
-    tile.fill((25, 118, 210))
-    pygame.draw.ellipse(tile, (66, 165, 245), (5, 12, 18, 8))
-    pygame.draw.ellipse(tile, (66, 165, 245), (24, 28, 18, 8))
-    return tile
-
-
-def criar_tile_areia():
-    tile = pygame.Surface((TAMANHO_TILE, TAMANHO_TILE))
-    tile.fill((212, 180, 100))
-    pygame.draw.circle(tile, (190, 155, 75), (14, 14), 4)
-    pygame.draw.circle(tile, (190, 155, 75), (36, 32), 3)
-    return tile
-
-
-def criar_frames_personagem():
-    frames = {}
-    for direcao in ['down', 'up', 'left', 'right']:
-        lista_frames = []
-        for f in range(4):
-            imagem = pygame.Surface((32, 40), pygame.SRCALPHA)
-
-            alt_esq = 14 + (4 if f in [1, 3] else 0)
-            alt_dir = 14 + (4 if f in [0, 2] else 0)
-            pygame.draw.rect(imagem, (30, 60, 120), (8, 24, 7, alt_esq))
-            pygame.draw.rect(imagem, (30, 60, 120), (17, 24, 7, alt_dir))
-
-            pygame.draw.rect(imagem, (33, 150, 243), (6, 14, 20, 16))
-            pygame.draw.rect(imagem, (255, 200, 150), (8, 2, 16, 14))
-            pygame.draw.rect(imagem, (80, 50, 20), (7, 1, 18, 5))
-
-            if direcao == 'down':
-                pygame.draw.rect(imagem, (0, 0, 0), (11, 10, 3, 3))
-                pygame.draw.rect(imagem, (0, 0, 0), (18, 10, 3, 3))
-            elif direcao == 'left':
-                pygame.draw.rect(imagem, (0, 0, 0), (10, 10, 3, 3))
-            elif direcao == 'right':
-                pygame.draw.rect(imagem, (0, 0, 0), (19, 10, 3, 3))
-
-            lista_frames.append(imagem)
-        frames[direcao] = lista_frames
-    return frames
-
-
-def carregar_mapa(nome_arquivo):
-    mapa = []
-    arquivo = open(nome_arquivo, 'r')
-    for linha in arquivo:
-        linha = linha.strip()
-        if linha != '':
-            numeros = linha.split(',')
-            linha_mapa = []
-            for n in numeros:
-                linha_mapa.append(int(n))
-            mapa.append(linha_mapa)
-    arquivo.close()
-    return mapa
-
-
-def checar_colisao(retangulo, mapa, tiles_solidos):
-    for linha in range(len(mapa)):
-        for coluna in range(len(mapa[linha])):
-            if mapa[linha][coluna] in tiles_solidos:
-                retangulo_tile = pygame.Rect(coluna * TAMANHO_TILE, linha * TAMANHO_TILE, TAMANHO_TILE, TAMANHO_TILE)
-                if retangulo.colliderect(retangulo_tile):
-                    return True, retangulo_tile
-    return False, None
-
-
-tile_grama = criar_tile_grama()
-tile_parede = criar_tile_parede()
-tile_agua = criar_tile_agua()
-tile_areia = criar_tile_areia()
-
-tiles_dict = {
-    0: tile_grama,
-    1: tile_parede,
-    2: tile_agua,
-    3: tile_areia,
+tiles_img = {
+    'gn': gn,
+    'gg': gg,
+    'gf': gf,
+    'pd': pd,
+    'ec': ec,
+    'ce': ce,
+    'dc': dc,
+    'cb': cb,
+    'pc': pc,
+    'pe': pe,
+    'tl': tl,
+    'te': te,
+    'th': th,
+    'tb': tb,
+    'tm': tm,
+    'td': td,
+    'di': di,
+    'es': es,
+    'po': po,
+    'ja': ja,
+    'ab': ab,
+    'ac': ac,
 }
 
-tiles_solidos = [1, 2]
+mapa = [
+    'gg,gg,gg,gg,gn,gn,gg,gg,gg,gg,gg,gg,gf,gn',
+    'gn,gf,gg,gg,gf,gf,gg,gf,gf,gg,gg,gf,gn,gn',
+    'gn,gn,gg,gg,gg,gg,gf,gf,gf,gg,gf,gf,gf,gf',
+    'gg,gg,gg,gg,gf,gg,gg,gf,gf,gg,gf,gf,gg,gf',
+    'gn,gg,gg,gg,gf,gg,gf,gg,gg,gf,gf,gn,gg,gg',
+    'gg,gf,gf,gg,pd,pd,pd,gf,gg,gf,gg,gf,gn,gg',
+    'gf,gn,gg,pd,pd,gf,gg,gf,gf,gg,gf,gg,gg,gn',
+    'gg,gg,pd,pd,gg,gf,gg,gg,gf,gf,gf,gg,gg,gf',
+    'gg,gg,gn,gf,gn,gg,gf,gg,gf,gf,gn,gf,gg,gg',
+    'gf,gf,gf,gg,gg,gg,gf,gf,gg,gg,gn,gg,gf,gn',
+]
 
-frames_personagem = criar_frames_personagem()
+mapa2 = [
+    'ec,ce,ce,ce,ce,ce,ce,ce,ce,ce,ce,ce,ce,dc',
+    'cb, , , , ,tl,te,th, , , , ,          ,cb',
+    'cb,ac, ,ac, ,tb,tm,td, , , , ,        ,cb',
+    'cb,ab, ,ab, ,di,ja,es, , , ,ac,       ,cb',
+    'cb, , , , ,di,po,es, , , ,ab,         ,cb',
+    'cb, ,ac, , , , , , , , , ,            ,cb',
+    'cb, ,ab, , , , , , , , , ,            ,cb',
+    'cb, , , , , , , , ,ac , , ,           ,cb',
+    'cb, , , , , , , , , ab, , ,           ,cb',
+    'pe,ce,ce,ce,ce,ce,ce,ce,ce,ce,ce,ce,ce,pc',
+]
 
-mapa = carregar_mapa('mapa.txt')
 
-LARGURA_MAPA = len(mapa[0]) * TAMANHO_TILE
-ALTURA_MAPA = len(mapa) * TAMANHO_TILE
+# posicionar o mapa no meio da tela
+colunas = len(mapa[0].split(','))
+linhas = len(mapa)
+offset_x = (800 - colunas * tile_size) // 2
+offset_y = (600 - linhas * tile_size) // 2
 
-camera_x = 0
-camera_y = 0
 
-PW = 32
-PH = 40
-jogador = pygame.Rect(
-    2 * TAMANHO_TILE + (TAMANHO_TILE - PW) // 2,
-    2 * TAMANHO_TILE + (TAMANHO_TILE - PH) // 2,
-    PW, PH
-)
+tipos_solidos = {'ec', 'ce', 'dc', 'cb', 'pc', 'pe', 'tl',
+                 'te', 'th', 'tb', 'tm', 'td', 'di', 'es', 'po', 'ja'}
 
-direcao = 'down'
-frame_atual = 0
-timer_animacao = 0
-VELOCIDADE = 3
+colliders = []
+for i in range(len(mapa2)):
+    tiles = mapa2[i].split(',')
+    for j in range(len(tiles)):
+        tile = tiles[j].strip()
+        if tile in tipos_solidos:
+            colliders.append(pygame.Rect(offset_x + j * tile_size,
+                             offset_y + i * tile_size, tile_size, tile_size))
 
-rodando = True
-while rodando:
-    dt = relogio.tick(FPS)
 
+while True:
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
-            rodando = False
-        elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
-            rodando = False
+            pygame.quit()
+            sys.exit()
 
-    teclas = pygame.key.get_pressed()
-    dx = 0
-    dy = 0
+    clock.tick(60)
+    dt = clock.get_time()
+    screen.fill((20, 24, 46))
+
+    # primeiro mapa
+    for i in range(len(mapa)):
+        tiles = mapa[i].split(',')
+        for j in range(len(tiles)):
+            tile = tiles[j]
+            if tile in tiles_img:
+                screen.blit(tiles_img[tile], (offset_x +
+                            j * tile_size, offset_y + i * tile_size))
+
+    old_pos_x = pos_x
+    old_pos_y = pos_y
+
+    keys = pygame.key.get_pressed()
     movendo = False
 
-    if teclas[pygame.K_LEFT] or teclas[pygame.K_a]:
-        dx = -VELOCIDADE
-        direcao = 'left'
+    if keys[pygame.K_RIGHT]:
+        pos_x = pos_x + 0.1 * dt
+        direcao = 'dir'
         movendo = True
-    elif teclas[pygame.K_RIGHT] or teclas[pygame.K_d]:
-        dx = VELOCIDADE
-        direcao = 'right'
+    elif keys[pygame.K_LEFT]:
+        pos_x = pos_x - 0.1 * dt
+        direcao = 'esq'
+        movendo = True
+    elif keys[pygame.K_UP]:
+        pos_y = pos_y - 0.1 * dt
+        direcao = 'cima'
+        movendo = True
+    elif keys[pygame.K_DOWN]:
+        pos_y = pos_y + 0.1 * dt
+        direcao = 'baixo'
         movendo = True
 
-    if teclas[pygame.K_UP] or teclas[pygame.K_w]:
-        dy = -VELOCIDADE
-        direcao = 'up'
-        movendo = True
-    elif teclas[pygame.K_DOWN] or teclas[pygame.K_s]:
-        dy = VELOCIDADE
-        direcao = 'down'
-        movendo = True
-
-    jogador.x = jogador.x + dx
-    colidiu, tile_rect = checar_colisao(jogador, mapa, tiles_solidos)
-    if colidiu:
-        if dx > 0:
-            jogador.right = tile_rect.left
-        else:
-            jogador.left = tile_rect.right
-
-    jogador.y = jogador.y + dy
-    colidiu, tile_rect = checar_colisao(jogador, mapa, tiles_solidos)
-    if colidiu:
-        if dy > 0:
-            jogador.bottom = tile_rect.top
-        else:
-            jogador.top = tile_rect.bottom
+    collider_jogador = pygame.Rect(pos_x, pos_y, 20, 25)
+    if collider_jogador.collidelist(colliders) != -1:
+        pos_x = old_pos_x
+        pos_y = old_pos_y
 
     if movendo:
-        timer_animacao = timer_animacao + dt
-        if timer_animacao >= 120:
-            timer_animacao = 0
-            frame_atual = (frame_atual + 1) % 4
+        anim_time += dt
+        if anim_time / 1000 > 0.15:
+            curr_frame = curr_frame + 1
+            if curr_frame > 3:
+                curr_frame = 0
+            anim_time = 0
+
     else:
-        frame_atual = 0
-        timer_animacao = 0
+        curr_frame = 0
 
-    camera_x = jogador.centerx - LARGURA // 2
-    camera_y = jogador.centery - ALTURA // 2
+    # pra calcular o tamanho de cada frame
+    # sem isso tava ficando tudo cortado, pq as imagens n batiam na msm largura e altura
+    img = direcoes[direcao]
+    # retornar o tamanho da imagem
+    larg, alt = hero_sprite.get_size()
+    frame_larg = larg // 4
+    frame_alt = alt // 4
+    # diminuir o tamanho so pra ficar mais bonitinho na imagem
+    frame_rect = (curr_frame * frame_larg, img *
+                  frame_alt, frame_larg, frame_alt)
+    # vou recortar o frame
+    frame = hero_sprite.subsurface(frame_rect)
+    # vou alterar para o tamanho q eu quero
+    frame = pygame.transform.scale(frame, (20, 25))
+    screen.blit(frame, (pos_x, pos_y))
 
-    if camera_x < 0:
-        camera_x = 0
-    if camera_y < 0:
-        camera_y = 0
-    if camera_x > LARGURA_MAPA - LARGURA:
-        camera_x = LARGURA_MAPA - LARGURA
-    if camera_y > ALTURA_MAPA - ALTURA:
-        camera_y = ALTURA_MAPA - ALTURA
+    # segundo mapa(colocar o segundo mapa aq, para o personagem passar atras das arvores)
+    for i in range(len(mapa2)):
+        tiles = mapa2[i].split(',')
+        for j in range(len(tiles)):
+            tile = tiles[j].strip()
+            if tile in tiles_img:
+                screen.blit(tiles_img[tile], (offset_x +
+                            j * tile_size, offset_y + i * tile_size))
 
-    tela.fill((20, 20, 20))
-
-    for linha in range(len(mapa)):
-        for coluna in range(len(mapa[linha])):
-            id_tile = mapa[linha][coluna]
-            tile_surf = tiles_dict[id_tile]
-            pos_x = coluna * TAMANHO_TILE - camera_x
-            pos_y = linha * TAMANHO_TILE - camera_y
-            tela.blit(tile_surf, (pos_x, pos_y))
-
-    imagem_jogador = frames_personagem[direcao][frame_atual]
-    tela.blit(imagem_jogador, (jogador.x - camera_x, jogador.y - camera_y))
-
-    pygame.display.flip()
-
-pygame.quit()
-sys.exit()
+   
+    pygame.display.update()
